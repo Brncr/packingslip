@@ -7,6 +7,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useGeneralChat } from "@/hooks/useGeneralChat";
 import { format } from "date-fns";
+import { DynamicOrderDetailModal } from "./workflow/DynamicOrderDetailModal";
+import { useWorkflowStages } from "@/hooks/useWorkflowStages";
+import { useLanguageState } from "@/hooks/useLanguage";
+import type { Database } from "@/integrations/supabase/types";
+
+type OrderWorkflow = Database["public"]["Tables"]["order_workflow"]["Row"];
 
 interface GeneralChatProps {
   isOpen: boolean;
@@ -15,6 +21,9 @@ interface GeneralChatProps {
 
 export function GeneralChat({ isOpen, onClose }: GeneralChatProps) {
   const { messages, orders, loading, currentUser, sendMessage } = useGeneralChat();
+  const { language } = useLanguageState();
+  const { stages } = useWorkflowStages();
+  
   const [inputValue, setInputValue] = useState("");
   const [showOrderPicker, setShowOrderPicker] = useState(false);
   const [orderSearch, setOrderSearch] = useState("");
@@ -23,9 +32,21 @@ export function GeneralChat({ isOpen, onClose }: GeneralChatProps) {
     id: string;
     customer_name: string;
   } | null>(null);
+  const [modalOrder, setModalOrder] = useState<OrderWorkflow | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const orderPickerRef = useRef<HTMLDivElement>(null);
+
+  const handleOpenOrderModal = (orderId: string | null) => {
+    if (!orderId) return;
+    const order = orders.find((o) => o.id === orderId);
+    if (order) {
+      setModalOrder(order);
+      setIsModalOpen(true);
+    }
+  };
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -207,7 +228,8 @@ export function GeneralChat({ isOpen, onClose }: GeneralChatProps) {
                             <div className={`mt-1 ${isMe ? "self-end" : "self-start"}`}>
                               <Badge
                                 variant="outline"
-                                className="text-[11px] gap-1 px-2 py-0.5 font-medium border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/30"
+                                className="text-[11px] gap-1 px-2 py-0.5 font-medium border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/30 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                                onClick={() => handleOpenOrderModal(msg.order_workflow_id)}
                               >
                                 <Hash className="w-3 h-3" />
                                 Order {msg.order_number}
@@ -338,6 +360,18 @@ export function GeneralChat({ isOpen, onClose }: GeneralChatProps) {
             </div>
           </motion.div>
         </>
+      )}
+
+      {modalOrder && (
+        <DynamicOrderDetailModal
+          order={modalOrder}
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+          language={language}
+          stageLabel={stages.find((s) => s.id === modalOrder.stage_id)?.name || "Unknown"}
+          stageColor={stages.find((s) => s.id === modalOrder.stage_id)?.color || "bg-gray-500"}
+          allStages={stages}
+        />
       )}
     </AnimatePresence>
   );
