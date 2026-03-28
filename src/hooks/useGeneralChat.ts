@@ -49,7 +49,21 @@ export function useGeneralChat() {
 
   const sendMessage = useCallback(
     async (content: string, orderNumber?: string, orderWorkflowId?: string) => {
+      // Optimistic update
+      const tempId = crypto.randomUUID();
+      const newMessage: ChatMessage = {
+        id: tempId,
+        author_name: currentUser,
+        content,
+        order_number: orderNumber || null,
+        order_workflow_id: orderWorkflowId || null,
+        created_at: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, newMessage]);
+
       const { error } = await supabase.from("general_chat_messages").insert({
+        id: tempId,
         author_name: currentUser,
         content,
         order_number: orderNumber || null,
@@ -58,6 +72,8 @@ export function useGeneralChat() {
 
       if (error) {
         console.error("Error sending message:", error);
+        // Rollback
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
         return false;
       }
       return true;
@@ -75,7 +91,12 @@ export function useGeneralChat() {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "general_chat_messages" },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as ChatMessage]);
+          setMessages((prev) => {
+            // Prevent duplicates from optimistic updates
+            const exists = prev.some((m) => m.id === (payload.new as ChatMessage).id);
+            if (exists) return prev;
+            return [...prev, payload.new as ChatMessage];
+          });
         }
       )
       .on(
