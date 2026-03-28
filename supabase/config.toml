@@ -1,0 +1,16 @@
+project_id = "wgdqvlzgwdpncptiwldf"
+
+[functions.shopify-orders]
+verify_jwt = false
+
+[functions.google-sheets]
+verify_jwt = false
+
+[functions.shopify-notify-customer]
+verify_jwt = false
+
+[functions.shopify-webhook]
+verify_jwt = false
+
+[functions.admin-auth]
+verify_jwt = false

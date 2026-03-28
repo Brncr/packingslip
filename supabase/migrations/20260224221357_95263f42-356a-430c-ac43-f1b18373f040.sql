@@ -1,0 +1,1 @@
+ALTER TABLE public.order_workflow ADD COLUMN payment_status text NOT NULL DEFAULT 'unpaid';
