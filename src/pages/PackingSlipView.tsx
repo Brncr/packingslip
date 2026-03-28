@@ -33,6 +33,7 @@ interface SlipOverrides {
   shippingMethod?: string;
   orderNotes?: string;
   footerMessage?: string;
+  imageUrl?: string;
 }
 
 function isLoggedIn(): boolean {
@@ -152,6 +153,7 @@ export default function PackingSlipView() {
       shippingMethod: prev.shippingMethod || order.shipping_lines?.[0]?.title || '',
       orderNotes: prev.orderNotes || order.note || '',
       footerMessage: prev.footerMessage || 'Thank you for shopping with us!',
+      imageUrl: prev.imageUrl || getImage() || '',
     }));
     setEditing(true);
   };
@@ -163,7 +165,7 @@ export default function PackingSlipView() {
     setSaving(true);
     const { error: err } = await supabase
       .from("order_workflow")
-      .update({ packing_slip_data: overrides as any })
+      .update({ packing_slip_data: overrides } as any)
       .eq("id", workflowId);
     setSaving(false);
     if (err) { toast.error("Failed to save"); console.error(err); }
@@ -226,7 +228,7 @@ export default function PackingSlipView() {
     }
     return mainProduct?.images?.[0]?.src;
   };
-  const imageUrl = getImage();
+  const dImageUrl = overrides.imageUrl !== undefined ? overrides.imageUrl : getImage();
 
   const dTitle = overrides.productTitle || mainItem?.title || '';
   const dVariant = overrides.variantTitle || mainItem?.variant_title || '';
@@ -385,9 +387,19 @@ export default function PackingSlipView() {
         )}
 
         {/* Product Image */}
-        {imageUrl && (
-          <div className="flex justify-center mb-6">
-            <img src={imageUrl} alt={mainItem?.title} className="max-h-[350px] max-w-full object-contain print:max-h-[280px]" />
+        {(dImageUrl || editing) && (
+          <div className="flex flex-col items-center justify-center mb-6">
+            {editing && (
+              <Input
+                value={dImageUrl || ''}
+                onChange={(e) => set('imageUrl', e.target.value)}
+                className="mb-2 w-full max-w-md text-sm text-center"
+                placeholder="Image URL (http...)"
+              />
+            )}
+            {dImageUrl && (
+              <img src={dImageUrl} alt={dTitle} className="max-h-[350px] max-w-full object-contain print:max-h-[280px]" />
+            )}
           </div>
         )}
 
