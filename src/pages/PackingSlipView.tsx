@@ -132,10 +132,10 @@ export default function PackingSlipView() {
     const billName = billCust ? `${billCust.address1 ? shipName : shipName}` : shipName;
 
     setOverrides(prev => ({
-      orderLabel: prev.orderLabel || (order.name?.replace('#', '') || String(order.order_number)),
-      orderDate: prev.orderDate || formatDate(order.created_at),
-      customerName: prev.customerName || shipName,
-      billName: prev.billName || shipName,
+      orderLabel: prev.orderLabel ?? (order.name?.replace('#', '') || String(order.order_number)),
+      orderDate: prev.orderDate ?? formatDate(order.created_at),
+      customerName: prev.customerName ?? shipName,
+      billName: prev.billName ?? shipName,
       shipAddress: prev.shipAddress || {
         address1: shipAddr?.address1 || '', address2: shipAddr?.address2 || '',
         city: shipAddr?.city || '', province: shipAddr?.province || '', zip: shipAddr?.zip || '', country: shipAddr?.country || '',
@@ -144,16 +144,16 @@ export default function PackingSlipView() {
         address1: billAddr?.address1 || '', address2: billAddr?.address2 || '',
         city: billAddr?.city || '', province: billAddr?.province || '', zip: billAddr?.zip || '', country: billAddr?.country || '',
       },
-      phone: prev.phone || order.customer?.phone || '',
-      productTitle: prev.productTitle || main?.title || '',
-      variantTitle: prev.variantTitle || main?.variant_title || '',
-      quantity: prev.quantity || main?.quantity || 1,
+      phone: prev.phone ?? (order.customer?.phone || ''),
+      productTitle: prev.productTitle ?? (mainItem?.title || ''),
+      variantTitle: prev.variantTitle ?? (mainItem?.variant_title || ''),
+      quantity: prev.quantity ?? (mainItem?.quantity || 1),
       specs: prev.specs || allProps,
       addons: prev.addons || addonsData,
-      shippingMethod: prev.shippingMethod || order.shipping_lines?.[0]?.title || '',
-      orderNotes: prev.orderNotes || order.note || '',
-      footerMessage: prev.footerMessage || 'Thank you for shopping with us!',
-      imageUrl: prev.imageUrl || getImage() || '',
+      shippingMethod: prev.shippingMethod ?? (order.shipping_lines?.[0]?.title || ''),
+      orderNotes: prev.orderNotes ?? (order.note || ''),
+      footerMessage: prev.footerMessage ?? 'Thank you for shopping with us!',
+      imageUrl: prev.imageUrl ?? (getImage() || ''),
     }));
     setEditing(true);
   };
@@ -204,17 +204,17 @@ export default function PackingSlipView() {
   }
 
   // Resolve display values: overrides > Shopify
-  const date = overrides.orderDate || formatDate(order.created_at);
-  const label = overrides.orderLabel || order.name?.replace('#', '') || String(order.order_number);
+  const date = overrides.orderDate ?? formatDate(order.created_at);
+  const label = overrides.orderLabel ?? (order.name?.replace('#', '') || String(order.order_number));
   const origShip = order.shipping_address || order.customer?.default_address;
   const origBill = order.billing_address || order.customer?.default_address || order.shipping_address;
   const origName = order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : "Guest";
 
-  const dName = overrides.customerName || origName;
-  const dBillName = overrides.billName || origName;
+  const dName = overrides.customerName ?? origName;
+  const dBillName = overrides.billName ?? origName;
   const dShip = overrides.shipAddress || origShip;
   const dBill = overrides.billAddress || origBill;
-  const dPhone = overrides.phone || order.customer?.phone || '';
+  const dPhone = overrides.phone ?? (order.customer?.phone || '');
 
   const sorted = [...order.line_items].sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
   const mainItem = sorted[0];
@@ -228,14 +228,14 @@ export default function PackingSlipView() {
     }
     return mainProduct?.images?.[0]?.src;
   };
-  const dImageUrl = overrides.imageUrl !== undefined ? overrides.imageUrl : getImage();
+  const dImageUrl = overrides.imageUrl ?? getImage();
 
-  const dTitle = overrides.productTitle || mainItem?.title || '';
-  const dVariant = overrides.variantTitle || mainItem?.variant_title || '';
-  const dQty = overrides.quantity || mainItem?.quantity || 1;
-  const dShipping = overrides.shippingMethod || order.shipping_lines?.[0]?.title || '';
-  const dNotes = overrides.orderNotes || order.note || '';
-  const dFooter = overrides.footerMessage || 'Thank you for shopping with us!';
+  const dTitle = overrides.productTitle ?? (mainItem?.title || '');
+  const dVariant = overrides.variantTitle ?? (mainItem?.variant_title || '');
+  const dQty = overrides.quantity ?? (mainItem?.quantity || 1);
+  const dShipping = overrides.shippingMethod ?? (order.shipping_lines?.[0]?.title || '');
+  const dNotes = overrides.orderNotes ?? (order.note || '');
+  const dFooter = overrides.footerMessage ?? 'Thank you for shopping with us!';
 
   const origSpecs = mainItem?.properties
     ?.filter(p => !p.name.toLowerCase().includes('image') && !p.name.toLowerCase().includes('photo') && !p.name.startsWith('_'))
