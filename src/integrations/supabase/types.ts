@@ -382,6 +382,7 @@ export type Database = {
           current_stage: Database["public"]["Enums"]["order_stage"]
           customer_email: string | null
           customer_name: string
+          freight_agent: string | null
           id: string
           notes: string | null
           notify_customer: boolean
@@ -400,6 +401,7 @@ export type Database = {
           current_stage?: Database["public"]["Enums"]["order_stage"]
           customer_email?: string | null
           customer_name: string
+          freight_agent?: string | null
           id?: string
           notes?: string | null
           notify_customer?: boolean
@@ -418,6 +420,7 @@ export type Database = {
           current_stage?: Database["public"]["Enums"]["order_stage"]
           customer_email?: string | null
           customer_name?: string
+          freight_agent?: string | null
           id?: string
           notes?: string | null
           notify_customer?: boolean

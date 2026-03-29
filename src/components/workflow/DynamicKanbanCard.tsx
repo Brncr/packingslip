@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -20,6 +27,7 @@ import {
   Trash2,
   MessageSquare,
   Paperclip,
+  Truck,
 } from "lucide-react";
 import { translations, type Language } from "@/hooks/useLanguage";
 import { DynamicOrderDetailModal } from "./DynamicOrderDetailModal";
@@ -28,6 +36,13 @@ import type { WorkflowStage } from "@/hooks/useWorkflowStages";
 import type { Database } from "@/integrations/supabase/types";
 
 type OrderWorkflow = Database["public"]["Tables"]["order_workflow"]["Row"];
+
+// Freight agent options
+const FREIGHT_AGENTS = [
+  { value: "xingyoung", label: "Send to Xingyoung" },
+  { value: "carl", label: "Send to Carl" },
+  { value: "other", label: "Send to Other" },
+] as const;
 
 // Translation mapping for default stage names
 const stageNameTranslations: Record<string, Record<Language, string>> = {
@@ -71,6 +86,7 @@ export function DynamicKanbanCard({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
   const [attachmentCount, setAttachmentCount] = useState(0);
+  const [freightAgent, setFreightAgent] = useState<string>(order.freight_agent || "");
   const t = (key: string) => translations[language][key] || key;
 
   // Find next stage by position
@@ -78,6 +94,11 @@ export function DynamicKanbanCard({
   const nextStage = currentIndex < allStages.length - 1 
     ? allStages[currentIndex + 1] 
     : null;
+
+  // Sync local state if prop changes (realtime update)
+  useEffect(() => {
+    setFreightAgent(order.freight_agent || "");
+  }, [order.freight_agent]);
 
   // Load counts
   useEffect(() => {
@@ -141,6 +162,40 @@ export function DynamicKanbanCard({
       order.order_number
     );
     setIsUpdating(false);
+  };
+
+  const handleFreightAgentChange = async (value: string) => {
+    const previousValue = freightAgent;
+    setFreightAgent(value);
+
+    const { error } = await supabase
+      .from("order_workflow")
+      .update({ freight_agent: value })
+      .eq("id", order.id);
+
+    if (error) {
+      console.error("Error updating freight agent:", error);
+      setFreightAgent(previousValue);
+    }
+  };
+
+  // Get label for current freight agent
+  const getAgentLabel = (value: string) => {
+    return FREIGHT_AGENTS.find((a) => a.value === value)?.label || "";
+  };
+
+  // Get badge color for agent
+  const getAgentColor = (value: string) => {
+    switch (value) {
+      case "xingyoung":
+        return "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800";
+      case "carl":
+        return "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800";
+      case "other":
+        return "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800";
+      default:
+        return "";
+    }
   };
 
   return (
@@ -207,6 +262,40 @@ export function DynamicKanbanCard({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+            </div>
+
+            {/* Freight Agent Selector */}
+            <div onClick={(e) => e.stopPropagation()}>
+              <Select
+                value={freightAgent}
+                onValueChange={handleFreightAgentChange}
+              >
+                <SelectTrigger
+                  className={`h-8 text-xs w-full ${
+                    freightAgent
+                      ? getAgentColor(freightAgent)
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Truck className="h-3 w-3 flex-shrink-0" />
+                    <SelectValue
+                      placeholder={
+                        language === "zh"
+                          ? "选择货运代理"
+                          : "Select freight agent"
+                      }
+                    />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {FREIGHT_AGENTS.map((agent) => (
+                    <SelectItem key={agent.value} value={agent.value}>
+                      {agent.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {(commentCount > 0 || attachmentCount > 0) && (

@@ -39,6 +39,7 @@ import {
   ArchiveRestore,
   DollarSign,
   AlertCircle,
+  Truck,
 } from "lucide-react";
 import { translations, type Language } from "@/hooks/useLanguage";
 import { DynamicOrderDetailModal } from "./DynamicOrderDetailModal";
@@ -50,6 +51,13 @@ import type { WorkflowStage } from "@/hooks/useWorkflowStages";
 import type { Database } from "@/integrations/supabase/types";
 
 type OrderWorkflow = Database["public"]["Tables"]["order_workflow"]["Row"];
+
+// Freight agent options
+const FREIGHT_AGENTS = [
+  { value: "xingyoung", label: "Send to Xingyoung" },
+  { value: "carl", label: "Send to Carl" },
+  { value: "other", label: "Send to Other" },
+] as const;
 
 interface RecentActivity {
   type: "comment" | "attachment" | "debit";
@@ -108,6 +116,7 @@ export function DraggableCard({
   const [commentCount, setCommentCount] = useState(0);
   const [attachmentCount, setAttachmentCount] = useState(0);
   const [paymentStatus, setPaymentStatus] = useState(order.payment_status || 'unpaid');
+  const [freightAgent, setFreightAgent] = useState<string>(order.freight_agent || "");
   const [hasRecentActivity, setHasRecentActivity] = useState(false);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const { addDeposit, addDebit } = useWallet();
@@ -137,6 +146,11 @@ export function DraggableCard({
   const nextStage = currentIndex < allStages.length - 1 
     ? allStages[currentIndex + 1] 
     : null;
+
+  // Sync local state with prop changes (realtime)
+  useEffect(() => {
+    setFreightAgent(order.freight_agent || "");
+  }, [order.freight_agent]);
 
   // Get current user name for read tracking (admin from token, agent from saved name)
   const currentUser = (() => {
@@ -339,6 +353,35 @@ export function DraggableCard({
     }
   };
 
+  const handleFreightAgentChange = async (value: string) => {
+    const previousValue = freightAgent;
+    setFreightAgent(value);
+
+    const { error } = await supabase
+      .from("order_workflow")
+      .update({ freight_agent: value })
+      .eq("id", order.id);
+
+    if (error) {
+      console.error("Error updating freight agent:", error);
+      setFreightAgent(previousValue);
+    }
+  };
+
+  // Get badge color for freight agent
+  const getAgentColor = (value: string) => {
+    switch (value) {
+      case "xingyoung":
+        return "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800";
+      case "carl":
+        return "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800";
+      case "other":
+        return "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800";
+      default:
+        return "";
+    }
+  };
+
   return (
     <>
       <div
@@ -502,6 +545,40 @@ export function DraggableCard({
                   {attachmentCount}
                 </div>
               )}
+            </div>
+
+            {/* Freight Agent Selector */}
+            <div onClick={(e) => e.stopPropagation()}>
+              <Select
+                value={freightAgent}
+                onValueChange={handleFreightAgentChange}
+              >
+                <SelectTrigger
+                  className={`h-8 text-xs w-full ${
+                    freightAgent
+                      ? getAgentColor(freightAgent)
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Truck className="h-3 w-3 flex-shrink-0" />
+                    <SelectValue
+                      placeholder={
+                        language === "zh"
+                          ? "选择货运代理"
+                          : "Select freight agent"
+                      }
+                    />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {FREIGHT_AGENTS.map((agent) => (
+                    <SelectItem key={agent.value} value={agent.value}>
+                      {agent.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Payment status - admin only */}
